@@ -1,0 +1,48 @@
+.heroWrap{
+  padding-top: 320px;   /* empurra o hero pra baixo */
+  padding-bottom: 20px;
+  display: flex;
+  justify-content: center;
+}
+
+
+.hero{
+  width: min(560px, 92vw);
+  position: relative;
+  display: flex;
+  justify-content: center;
+}
+
+/* Floral “por cima” */
+.floral{
+  position: absolute;
+  top: -54px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(620px, 110%);
+  pointer-events: none;
+}
+
+
+
+.nameSmall{
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: .35em;
+  font-size: 20px;
+}
+
+.amp{
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 44px;
+  line-height: 1;
+  margin: 10px 0;
+}
+@media (max-width: 767px) {
+  .heroWrap {
+    padding-top: 60px;
+  }
+
+  .frame {
+    padding: 36px 24px;
+  }
+}

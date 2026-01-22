@@ -1,0 +1,21 @@
+/* Tablet */
+@media (min-width: 768px) {
+
+  .section-title {
+    font-size: 20px;
+  }
+
+  .card {
+    padding: 24px;
+  }
+
+}
+
+/* Desktop */
+@media (min-width: 1024px) {
+
+  .section-title {
+    font-size: 22px;
+  }
+
+}
