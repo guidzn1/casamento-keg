@@ -15,7 +15,7 @@ export default function Cerimonia() {
     <InfoRow label="Horário" value="17h00" />
     <InfoRow label="Local" value="Chácara Biaflora" />
 
-    <InfoRow label="Endereço" value="Av. Exemplo, 123 – Marabá / PA" />
+    <InfoRow label="Endereço" value="Rodovia Pa 70 Km 6 SN Km 07 - Marabá-PA" />
   </div>
 
   <div style={{ marginTop: 24, display: "flex", justifyContent: "center" }}>

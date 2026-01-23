@@ -29,7 +29,7 @@ export default function Home() {
   >
     Criamos este espaço para compartilhar com você todos os detalhes
     do nosso grande dia. Aqui você encontrará informações sobre a cerimônia,
-    novidades importantes e nossa lista de presentes.
+    novidades importantes. confirmar presença e nossa lista de presentes.
   </p>
 
   <div
