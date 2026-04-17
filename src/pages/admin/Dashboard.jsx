@@ -3,6 +3,7 @@ import { supabase } from "../../lib/supabaseClient";
 import Card from "../../components/Card";
 import PrimaryButton from "../../components/PrimaryButton";
 import { uploadGiftImage } from "../../lib/uploadGiftImage";
+import { uploadPostImage } from "../../lib/uploadPostImage";
 
 export default function AdminDashboard() {
   async function logout() {
@@ -381,7 +382,6 @@ function PostsManager() {
 
   useEffect(() => {
     fetchPosts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function fetchPosts() {
@@ -410,7 +410,9 @@ function PostsManager() {
       title: p.title || "",
       content: p.content || "",
       cover_url: p.cover_url || "",
+      link_url: p.link_url || "",
       is_published: !!p.is_published,
+      image_file: null,
     });
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -423,13 +425,23 @@ function PostsManager() {
     try {
       const title = form.title.trim();
       const content = form.content.trim();
+
       if (!title) throw new Error("Título é obrigatório.");
       if (!content) throw new Error("Conteúdo é obrigatório.");
+
+      // 🔥 upload da imagem (se houver)
+      let coverUrl = form.cover_url?.trim() || null;
+
+      if (form.image_file) {
+        const { publicUrl } = await uploadPostImage(form.image_file);
+        coverUrl = publicUrl;
+      }
 
       const payload = {
         title,
         content,
-        cover_url: form.cover_url?.trim() || null,
+        cover_url: coverUrl,
+        link_url: form.link_url?.trim() || null,
         is_published: !!form.is_published,
         published_at: form.is_published ? new Date().toISOString() : null,
       };
@@ -438,7 +450,12 @@ function PostsManager() {
         if (editing.is_published && payload.is_published) {
           delete payload.published_at;
         }
-        const { error } = await supabase.from("posts").update(payload).eq("id", editing.id);
+
+        const { error } = await supabase
+          .from("posts")
+          .update(payload)
+          .eq("id", editing.id);
+
         if (error) throw error;
       } else {
         const { error } = await supabase.from("posts").insert(payload);
@@ -456,98 +473,141 @@ function PostsManager() {
   }
 
   async function togglePublish(p) {
-    const nextPublished = !p.is_published;
-    const payload = {
-      is_published: nextPublished,
-      published_at: nextPublished ? new Date().toISOString() : null,
-    };
+    const next = !p.is_published;
 
-    const { error } = await supabase.from("posts").update(payload).eq("id", p.id);
+    const { error } = await supabase
+      .from("posts")
+      .update({
+        is_published: next,
+        published_at: next ? new Date().toISOString() : null,
+      })
+      .eq("id", p.id);
+
     if (error) {
-      setError("Não foi possível atualizar a publicação.");
+      setError("Erro ao atualizar.");
       return;
     }
 
-    setPosts((prev) => prev.map((x) => (x.id === p.id ? { ...x, ...payload } : x)));
+    setPosts((prev) =>
+      prev.map((x) =>
+        x.id === p.id
+          ? {
+              ...x,
+              is_published: next,
+              published_at: next ? new Date().toISOString() : null,
+            }
+          : x
+      )
+    );
   }
 
   async function deletePost(p) {
-    const ok = confirm(`Excluir a novidade "${p.title}"?`);
+    const ok = confirm(`Excluir "${p.title}"?`);
     if (!ok) return;
 
     const { error } = await supabase.from("posts").delete().eq("id", p.id);
+
     if (error) {
-      setError("Não foi possível excluir.");
+      setError("Erro ao excluir.");
       return;
     }
+
     setPosts((prev) => prev.filter((x) => x.id !== p.id));
   }
 
   return (
     <div style={{ marginTop: 14 }}>
       <Card>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-          <h3 style={{ margin: 0 }}>{editing ? "Editar novidade" : "Cadastrar novidade"}</h3>
-          <PrimaryButton onClick={startCreatePost}>Nova novidade</PrimaryButton>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <h3>{editing ? "Editar novidade" : "Nova novidade"}</h3>
+          <PrimaryButton onClick={startCreatePost}>
+            Nova novidade
+          </PrimaryButton>
         </div>
 
         <form onSubmit={savePost} style={{ marginTop: 14 }}>
           <Field label="Título">
             <input
               value={form.title}
-              onChange={(e) => setForm((p) => ({ ...p, title: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, title: e.target.value }))
+              }
               style={inputStyle}
-              placeholder="Ex: Hospedagem perto da chácara"
               required
             />
           </Field>
 
-          <Field label="Conteúdo (pode quebrar linhas)">
+          <Field label="Conteúdo">
             <textarea
               value={form.content}
-              onChange={(e) => setForm((p) => ({ ...p, content: e.target.value }))}
-              style={{ ...inputStyle, minHeight: 140 }}
-              placeholder="Escreva as dicas aqui..."
+              onChange={(e) =>
+                setForm((p) => ({ ...p, content: e.target.value }))
+              }
+              style={{ ...inputStyle, minHeight: 120 }}
               required
             />
           </Field>
 
-          <Field label="URL da capa (opcional)">
+          {/* 🔥 LINK CLICÁVEL */}
+          <Field label="Link (opcional)">
+            <input
+              value={form.link_url}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, link_url: e.target.value }))
+              }
+              style={inputStyle}
+              placeholder="https://..."
+            />
+          </Field>
+
+          {/* 🔥 UPLOAD */}
+          <Field label="Imagem (upload)">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) =>
+                setForm((p) => ({
+                  ...p,
+                  image_file: e.target.files?.[0] || null,
+                }))
+              }
+            />
+          </Field>
+
+          {/* 🔥 URL opcional */}
+          <Field label="OU URL da imagem">
             <input
               value={form.cover_url}
-              onChange={(e) => setForm((p) => ({ ...p, cover_url: e.target.value }))}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, cover_url: e.target.value }))
+              }
               style={inputStyle}
               placeholder="https://..."
             />
           </Field>
 
           <div style={{ marginTop: 12 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14 }}>
+            <label style={{ display: "flex", gap: 8 }}>
               <input
                 type="checkbox"
                 checked={form.is_published}
-                onChange={(e) => setForm((p) => ({ ...p, is_published: e.target.checked }))}
+                onChange={(e) =>
+                  setForm((p) => ({
+                    ...p,
+                    is_published: e.target.checked,
+                  }))
+                }
               />
-              Publicado (aparece no site)
+              Publicado
             </label>
           </div>
 
-          {error && <div style={{ color: "red", marginTop: 12, fontSize: 13 }}>{error}</div>}
+          {error && <p style={{ color: "red" }}>{error}</p>}
 
-          <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <PrimaryButton>{saving ? "Salvando..." : "Salvar"}</PrimaryButton>
-            {editing && (
-              <button
-                type="button"
-                onClick={() => {
-                  setEditing(null);
-                  setForm(emptyPostForm());
-                }}
-                style={secondaryBtn}
-              >
-                Cancelar
-              </button>
-            )}
+          <div style={{ marginTop: 14 }}>
+            <PrimaryButton>
+              {saving ? "Salvando..." : "Salvar"}
+            </PrimaryButton>
           </div>
         </form>
       </Card>
@@ -555,52 +615,31 @@ function PostsManager() {
       <div style={{ height: 14 }} />
 
       <Card>
-        <h3 style={{ marginTop: 0 }}>Novidades cadastradas</h3>
+        <h3>Novidades cadastradas</h3>
 
         {loading && <p>Carregando...</p>}
 
-        {!loading && posts.length === 0 && (
-          <p style={{ color: "var(--muted)" }}>Nenhuma novidade cadastrada ainda.</p>
-        )}
-
         {!loading &&
           posts.map((p) => (
-            <div
-              key={p.id}
-              style={{
-                border: "1px solid var(--border)",
-                borderRadius: 12,
-                padding: 12,
-                marginBottom: 10,
-                background: "rgba(255,255,255,.75)",
-                display: "grid",
-                gap: 8,
-              }}
-            >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <div>
-                  <strong>{p.title}</strong>
-                  <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>
-                    {p.is_published ? "Publicado" : "Oculto"}
-                    {p.published_at ? ` • ${new Date(p.published_at).toLocaleString("pt-BR")}` : ""}
-                  </div>
-                </div>
+            <div key={p.id} style={{ marginBottom: 10 }}>
+              <strong>{p.title}</strong>
 
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button type="button" style={secondaryBtn} onClick={() => startEditPost(p)}>
-                    Editar
-                  </button>
-                  <button type="button" style={secondaryBtn} onClick={() => togglePublish(p)}>
-                    {p.is_published ? "Ocultar" : "Publicar"}
-                  </button>
-                  <button type="button" style={dangerBtn} onClick={() => deletePost(p)}>
-                    Excluir
-                  </button>
-                </div>
+              <div style={{ fontSize: 12, color: "#666" }}>
+                {p.is_published ? "Publicado" : "Oculto"}
               </div>
 
-              <div style={{ fontSize: 13, color: "var(--muted)", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>
-                {truncate(p.content, 220)}
+              <div style={{ marginTop: 6 }}>
+                <button onClick={() => startEditPost(p)}>
+                  Editar
+                </button>
+
+                <button onClick={() => togglePublish(p)}>
+                  {p.is_published ? "Ocultar" : "Publicar"}
+                </button>
+
+                <button onClick={() => deletePost(p)}>
+                  Excluir
+                </button>
               </div>
             </div>
           ))}
