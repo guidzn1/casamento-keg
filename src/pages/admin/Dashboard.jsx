@@ -5,37 +5,143 @@ import PrimaryButton from "../../components/PrimaryButton";
 import { uploadGiftImage } from "../../lib/uploadGiftImage";
 import { uploadPostImage } from "../../lib/uploadPostImage";
 
+const TABS = [
+  {
+    key: "gifts",
+    label: "Presentes",
+    description: "Cadastre, edite e ative os presentes do site.",
+  },
+  {
+    key: "posts",
+    label: "Novidades",
+    description: "Gerencie avisos, informações e links importantes.",
+  },
+  {
+    key: "rsvps",
+    label: "RSVP",
+    description: "Veja confirmações, filtre respostas e exporte CSV.",
+  },
+];
+
 export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState("gifts");
+
   async function logout() {
     await supabase.auth.signOut();
     window.location.href = "/admin";
   }
 
+  const currentTab = TABS.find((tab) => tab.key === activeTab);
+
   return (
-    <div style={{ padding: 16, display: "flex", justifyContent: "center" }}>
-      <div style={{ width: "100%", maxWidth: 960 }}>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            gap: 12,
-            flexWrap: "wrap",
-            marginBottom: 14,
-          }}
-        >
-          <h2 style={{ margin: 0 }}>Dashboard Admin</h2>
-          <PrimaryButton onClick={logout}>Sair</PrimaryButton>
-        </div>
+    <div
+      style={{
+        minHeight: "100vh",
+        padding: 16,
+        display: "flex",
+        justifyContent: "center",
+        background:
+          "linear-gradient(180deg, rgba(248,248,248,1) 0%, rgba(241,241,241,1) 100%)",
+      }}
+    >
+      <div style={{ width: "100%", maxWidth: 1180 }}>
+        <Card>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 16,
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: 12,
+                  letterSpacing: 2,
+                  textTransform: "uppercase",
+                  color: "var(--muted)",
+                  marginBottom: 6,
+                }}
+              >
+                Área administrativa
+              </div>
 
-        {/* ✅ PRESENTES */}
-        <GiftsManager />
+              <h2 style={{ margin: 0, fontSize: 28 }}>Dashboard</h2>
 
-        {/* ✅ NOVIDADES */}
-        <PostsManager />
+              <p
+                style={{
+                  margin: "8px 0 0 0",
+                  color: "var(--muted)",
+                  lineHeight: 1.5,
+                  maxWidth: 680,
+                }}
+              >
+                Agora cada área fica separada em uma aba, para você acessar mais
+                rápido sem precisar rolar a página toda.
+              </p>
+            </div>
 
-        {/* ✅ RSVP (quem confirmou) */}
-        <RsvpsManager />
+            <PrimaryButton onClick={logout}>Sair</PrimaryButton>
+          </div>
+
+          <div
+            style={{
+              marginTop: 18,
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            {TABS.map((tab) => (
+              <button
+                key={tab.key}
+                type="button"
+                onClick={() => setActiveTab(tab.key)}
+                style={{
+                  ...tabButtonStyle,
+                  ...(activeTab === tab.key ? activeTabButtonStyle : {}),
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </Card>
+
+        <div style={{ height: 14 }} />
+
+        <Card>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+              alignItems: "center",
+            }}
+          >
+            <div>
+              <h3 style={{ margin: 0 }}>{currentTab?.label}</h3>
+              <p
+                style={{
+                  margin: "8px 0 0 0",
+                  color: "var(--muted)",
+                  fontSize: 14,
+                }}
+              >
+                {currentTab?.description}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        <div style={{ height: 14 }} />
+
+        {activeTab === "gifts" && <GiftsManager />}
+        {activeTab === "posts" && <PostsManager />}
+        {activeTab === "rsvps" && <RsvpsManager />}
       </div>
     </div>
   );
@@ -110,10 +216,10 @@ function GiftsManager() {
       const priceCents = parsePriceToCents(form.price);
       if (priceCents <= 0) throw new Error("Preço inválido.");
 
-      if (!form.mp_link?.trim())
+      if (!form.mp_link?.trim()) {
         throw new Error("Link do Mercado Pago é obrigatório.");
+      }
 
-      // Upload opcional
       let imageUrl = form.image_url?.trim() || null;
       if (form.image_file) {
         const { publicUrl } = await uploadGiftImage(form.image_file);
@@ -134,6 +240,7 @@ function GiftsManager() {
           .from("gifts")
           .update(payload)
           .eq("id", editing.id);
+
         if (error) throw error;
       } else {
         const { error } = await supabase.from("gifts").insert(payload);
@@ -177,11 +284,19 @@ function GiftsManager() {
       setError("Não foi possível excluir.");
       return;
     }
+
     setGifts((prev) => prev.filter((g) => g.id !== gift.id));
   }
 
   return (
-    <div>
+    <div
+      style={{
+        display: "grid",
+        gap: 14,
+        gridTemplateColumns: "minmax(320px, 420px) minmax(0, 1fr)",
+        alignItems: "start",
+      }}
+    >
       <Card>
         <div
           style={{
@@ -189,12 +304,21 @@ function GiftsManager() {
             justifyContent: "space-between",
             gap: 12,
             flexWrap: "wrap",
+            alignItems: "center",
           }}
         >
-          <h3 style={{ margin: 0 }}>
-            {editing ? "Editar presente" : "Cadastrar presente"}
-          </h3>
-          <PrimaryButton onClick={startCreateGift}>Novo presente</PrimaryButton>
+          <div>
+            <h3 style={{ margin: 0 }}>
+              {editing ? "Editar presente" : "Cadastrar presente"}
+            </h3>
+            <p style={{ margin: "8px 0 0 0", color: "var(--muted)", fontSize: 13 }}>
+              Preencha os dados do presente e salve.
+            </p>
+          </div>
+
+          <button type="button" style={secondaryBtn} onClick={startCreateGift}>
+            Novo presente
+          </button>
         </div>
 
         <form onSubmit={saveGift} style={{ marginTop: 14 }}>
@@ -214,76 +338,80 @@ function GiftsManager() {
               onChange={(e) =>
                 setForm((p) => ({ ...p, description: e.target.value }))
               }
-              style={{ ...inputStyle, minHeight: 80 }}
+              style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
               placeholder="Ex: Para nossas receitas do dia a dia"
             />
           </Field>
 
-          <div
-            style={{
-              display: "grid",
-              gap: 12,
-              gridTemplateColumns: "1fr",
-              marginTop: 12,
-            }}
-          >
-            <Field label="Preço (R$)">
-              <input
-                value={form.price}
-                onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
-                style={inputStyle}
-                placeholder="Ex: 399,90"
-                required
-              />
-            </Field>
+          <Field label="Preço (R$)">
+            <input
+              value={form.price}
+              onChange={(e) => setForm((p) => ({ ...p, price: e.target.value }))}
+              style={inputStyle}
+              placeholder="Ex: 399,90"
+              required
+            />
+          </Field>
 
-            <Field label="Link Mercado Pago (checkout)">
-              <input
-                value={form.mp_link}
-                onChange={(e) => setForm((p) => ({ ...p, mp_link: e.target.value }))}
-                style={inputStyle}
-                placeholder="Cole o link do Mercado Pago aqui"
-                required
-              />
-            </Field>
-          </div>
+          <Field label="Link Mercado Pago">
+            <input
+              value={form.mp_link}
+              onChange={(e) => setForm((p) => ({ ...p, mp_link: e.target.value }))}
+              style={inputStyle}
+              placeholder="Cole o link do checkout"
+              required
+            />
+          </Field>
 
           <div style={{ marginTop: 12 }}>
-            <label style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 14 }}>
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                fontSize: 14,
+                color: "var(--text)",
+              }}
+            >
               <input
                 type="checkbox"
                 checked={form.is_active}
-                onChange={(e) => setForm((p) => ({ ...p, is_active: e.target.checked }))}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, is_active: e.target.checked }))
+                }
               />
-              Ativo (aparece no site)
+              Ativo no site
             </label>
           </div>
 
-          <div style={{ marginTop: 12 }}>
-            <Field label="Imagem (opcional)">
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, image_file: e.target.files?.[0] || null }))
-                }
-              />
-              <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
-                Se você não enviar arquivo, pode colar uma URL abaixo (opcional).
-              </div>
-              <input
-                value={form.image_url}
-                onChange={(e) => setForm((p) => ({ ...p, image_url: e.target.value }))}
-                style={{ ...inputStyle, marginTop: 10 }}
-                placeholder="URL da imagem (opcional)"
-              />
-            </Field>
-          </div>
+          <Field label="Imagem (upload)">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) =>
+                setForm((p) => ({ ...p, image_file: e.target.files?.[0] || null }))
+              }
+            />
+          </Field>
 
-          {error && <div style={{ color: "red", marginTop: 12, fontSize: 13 }}>{error}</div>}
+          <Field label="OU URL da imagem">
+            <input
+              value={form.image_url}
+              onChange={(e) =>
+                setForm((p) => ({ ...p, image_url: e.target.value }))
+              }
+              style={inputStyle}
+              placeholder="https://..."
+            />
+          </Field>
+
+          {error && (
+            <div style={{ color: "red", marginTop: 12, fontSize: 13 }}>{error}</div>
+          )}
 
           <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
             <PrimaryButton>{saving ? "Salvando..." : "Salvar"}</PrimaryButton>
+
             {editing && (
               <button
                 type="button"
@@ -300,10 +428,24 @@ function GiftsManager() {
         </form>
       </Card>
 
-      <div style={{ height: 14 }} />
-
       <Card>
-        <h3 style={{ marginTop: 0 }}>Presentes cadastrados</h3>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            alignItems: "center",
+            marginBottom: 10,
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0 }}>Presentes cadastrados</h3>
+            <p style={{ margin: "8px 0 0 0", color: "var(--muted)", fontSize: 13 }}>
+              Total: <strong>{sorted.length}</strong>
+            </p>
+          </div>
+        </div>
 
         {loading && <p>Carregando...</p>}
 
@@ -317,34 +459,69 @@ function GiftsManager() {
               key={g.id}
               style={{
                 border: "1px solid var(--border)",
-                borderRadius: 12,
-                padding: 12,
+                borderRadius: 14,
+                padding: 14,
                 marginBottom: 10,
-                background: "rgba(255,255,255,.75)",
+                background: "rgba(255,255,255,.78)",
                 display: "grid",
                 gap: 10,
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  alignItems: "start",
+                }}
+              >
                 <div>
-                  <strong>{g.title}</strong>
-                  <div style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>
-                    {(g.price_cents / 100).toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}{" "}
-                    • {g.is_active ? "Ativo" : "Inativo"}
+                  <strong style={{ fontSize: 16 }}>{g.title}</strong>
+
+                  <div
+                    style={{
+                      fontSize: 13,
+                      color: "var(--muted)",
+                      marginTop: 6,
+                      display: "flex",
+                      gap: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <span>
+                      {(g.price_cents / 100).toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </span>
+                    <span>•</span>
+                    <span>{g.is_active ? "Ativo" : "Inativo"}</span>
                   </div>
                 </div>
 
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button type="button" style={secondaryBtn} onClick={() => startEditGift(g)}>
+                  <button
+                    type="button"
+                    style={secondaryBtn}
+                    onClick={() => startEditGift(g)}
+                  >
                     Editar
                   </button>
-                  <button type="button" style={secondaryBtn} onClick={() => toggleActive(g)}>
+
+                  <button
+                    type="button"
+                    style={secondaryBtn}
+                    onClick={() => toggleActive(g)}
+                  >
                     {g.is_active ? "Desativar" : "Ativar"}
                   </button>
-                  <button type="button" style={dangerBtn} onClick={() => deleteGift(g)}>
+
+                  <button
+                    type="button"
+                    style={dangerBtn}
+                    onClick={() => deleteGift(g)}
+                  >
                     Excluir
                   </button>
                 </div>
@@ -357,7 +534,12 @@ function GiftsManager() {
               )}
 
               {g.mp_link && (
-                <a href={g.mp_link} target="_blank" rel="noreferrer" style={{ fontSize: 13 }}>
+                <a
+                  href={g.mp_link}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ fontSize: 13, fontWeight: 600 }}
+                >
                   Abrir link Mercado Pago
                 </a>
               )}
@@ -429,7 +611,6 @@ function PostsManager() {
       if (!title) throw new Error("Título é obrigatório.");
       if (!content) throw new Error("Conteúdo é obrigatório.");
 
-      // 🔥 upload da imagem (se houver)
       let coverUrl = form.cover_url?.trim() || null;
 
       if (form.image_file) {
@@ -516,13 +697,36 @@ function PostsManager() {
   }
 
   return (
-    <div style={{ marginTop: 14 }}>
+    <div
+      style={{
+        display: "grid",
+        gap: 14,
+        gridTemplateColumns: "minmax(320px, 420px) minmax(0, 1fr)",
+        alignItems: "start",
+      }}
+    >
       <Card>
-        <div style={{ display: "flex", justifyContent: "space-between" }}>
-          <h3>{editing ? "Editar novidade" : "Nova novidade"}</h3>
-          <PrimaryButton onClick={startCreatePost}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0 }}>
+              {editing ? "Editar novidade" : "Nova novidade"}
+            </h3>
+            <p style={{ margin: "8px 0 0 0", color: "var(--muted)", fontSize: 13 }}>
+              Adicione título, conteúdo, imagem e link.
+            </p>
+          </div>
+
+          <button type="button" style={secondaryBtn} onClick={startCreatePost}>
             Nova novidade
-          </PrimaryButton>
+          </button>
         </div>
 
         <form onSubmit={savePost} style={{ marginTop: 14 }}>
@@ -543,12 +747,11 @@ function PostsManager() {
               onChange={(e) =>
                 setForm((p) => ({ ...p, content: e.target.value }))
               }
-              style={{ ...inputStyle, minHeight: 120 }}
+              style={{ ...inputStyle, minHeight: 140, resize: "vertical" }}
               required
             />
           </Field>
 
-          {/* 🔥 LINK CLICÁVEL */}
           <Field label="Link (opcional)">
             <input
               value={form.link_url}
@@ -560,7 +763,6 @@ function PostsManager() {
             />
           </Field>
 
-          {/* 🔥 UPLOAD */}
           <Field label="Imagem (upload)">
             <input
               type="file"
@@ -574,7 +776,6 @@ function PostsManager() {
             />
           </Field>
 
-          {/* 🔥 URL opcional */}
           <Field label="OU URL da imagem">
             <input
               value={form.cover_url}
@@ -587,7 +788,7 @@ function PostsManager() {
           </Field>
 
           <div style={{ marginTop: 12 }}>
-            <label style={{ display: "flex", gap: 8 }}>
+            <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <input
                 type="checkbox"
                 checked={form.is_published}
@@ -604,42 +805,113 @@ function PostsManager() {
 
           {error && <p style={{ color: "red" }}>{error}</p>}
 
-          <div style={{ marginTop: 14 }}>
-            <PrimaryButton>
-              {saving ? "Salvando..." : "Salvar"}
-            </PrimaryButton>
+          <div style={{ marginTop: 14, display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <PrimaryButton>{saving ? "Salvando..." : "Salvar"}</PrimaryButton>
+
+            {editing && (
+              <button
+                type="button"
+                style={secondaryBtn}
+                onClick={() => {
+                  setEditing(null);
+                  setForm(emptyPostForm());
+                }}
+              >
+                Cancelar
+              </button>
+            )}
           </div>
         </form>
       </Card>
 
-      <div style={{ height: 14 }} />
-
       <Card>
-        <h3>Novidades cadastradas</h3>
+        <div style={{ marginBottom: 10 }}>
+          <h3 style={{ margin: 0 }}>Novidades cadastradas</h3>
+          <p style={{ margin: "8px 0 0 0", color: "var(--muted)", fontSize: 13 }}>
+            Total: <strong>{posts.length}</strong>
+          </p>
+        </div>
 
         {loading && <p>Carregando...</p>}
 
+        {!loading && posts.length === 0 && (
+          <p style={{ color: "var(--muted)" }}>Nenhuma novidade cadastrada ainda.</p>
+        )}
+
         {!loading &&
           posts.map((p) => (
-            <div key={p.id} style={{ marginBottom: 10 }}>
-              <strong>{p.title}</strong>
+            <div
+              key={p.id}
+              style={{
+                border: "1px solid var(--border)",
+                borderRadius: 14,
+                padding: 14,
+                marginBottom: 10,
+                background: "rgba(255,255,255,.78)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                  alignItems: "start",
+                }}
+              >
+                <div style={{ maxWidth: 650 }}>
+                  <strong style={{ fontSize: 16 }}>{p.title}</strong>
 
-              <div style={{ fontSize: 12, color: "#666" }}>
-                {p.is_published ? "Publicado" : "Oculto"}
-              </div>
+                  <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 6 }}>
+                    {p.is_published ? "Publicado" : "Oculto"}
+                    {p.published_at
+                      ? ` • ${new Date(p.published_at).toLocaleString("pt-BR")}`
+                      : ""}
+                  </div>
 
-              <div style={{ marginTop: 6 }}>
-                <button onClick={() => startEditPost(p)}>
-                  Editar
-                </button>
+                  {p.content && (
+                    <div
+                      style={{
+                        marginTop: 10,
+                        fontSize: 13,
+                        lineHeight: 1.55,
+                        color: "var(--muted)",
+                      }}
+                    >
+                      {truncate(p.content, 180)}
+                    </div>
+                  )}
 
-                <button onClick={() => togglePublish(p)}>
-                  {p.is_published ? "Ocultar" : "Publicar"}
-                </button>
+                  {p.link_url && (
+                    <a
+                      href={p.link_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        display: "inline-block",
+                        marginTop: 10,
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
+                      Abrir link
+                    </a>
+                  )}
+                </div>
 
-                <button onClick={() => deletePost(p)}>
-                  Excluir
-                </button>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button type="button" style={secondaryBtn} onClick={() => startEditPost(p)}>
+                    Editar
+                  </button>
+
+                  <button type="button" style={secondaryBtn} onClick={() => togglePublish(p)}>
+                    {p.is_published ? "Ocultar" : "Publicar"}
+                  </button>
+
+                  <button type="button" style={dangerBtn} onClick={() => deletePost(p)}>
+                    Excluir
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -667,7 +939,10 @@ function RsvpsManager() {
     setLoading(true);
     setError("");
 
-    let q = supabase.from("rsvps").select("*").order("created_at", { ascending: false });
+    let q = supabase
+      .from("rsvps")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (attendanceFilter !== "all") q = q.eq("attendance", attendanceFilter);
     if (statusFilter !== "all") q = q.eq("status", statusFilter);
@@ -685,7 +960,10 @@ function RsvpsManager() {
         ? { status: "attended", attended_at: new Date().toISOString() }
         : { status: nextStatus, attended_at: null };
 
-    const { error } = await supabase.from("rsvps").update(payload).eq("id", id);
+    const { error } = await supabase
+      .from("rsvps")
+      .update(payload)
+      .eq("id", id);
 
     if (error) {
       alert("Não foi possível atualizar o status.");
@@ -704,6 +982,7 @@ function RsvpsManager() {
       alert("Não foi possível excluir.");
       return;
     }
+
     setItems((p) => p.filter((x) => x.id !== id));
   }
 
@@ -758,6 +1037,7 @@ function RsvpsManager() {
       alert("Sem telefone para copiar.");
       return;
     }
+
     try {
       await navigator.clipboard.writeText(digits);
       alert("Telefone copiado!");
@@ -773,7 +1053,17 @@ function RsvpsManager() {
   }
 
   function exportCSV() {
-    const header = ["Data", "Nome", "Telefone", "Vai", "Status", "Pessoas", "Acompanhantes", "Mensagem", "Compareceu em"];
+    const header = [
+      "Data",
+      "Nome",
+      "Telefone",
+      "Vai",
+      "Status",
+      "Pessoas",
+      "Acompanhantes",
+      "Mensagem",
+      "Compareceu em",
+    ];
 
     const rows = items.map((x) => [
       x.created_at ? new Date(x.created_at).toLocaleString("pt-BR") : "",
@@ -788,7 +1078,9 @@ function RsvpsManager() {
     ]);
 
     const csv = [header, ...rows]
-      .map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .map((r) =>
+        r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+      )
       .join("\n");
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -806,131 +1098,182 @@ function RsvpsManager() {
   const totalPeople = items.reduce((acc, x) => acc + (x.guests_count || 0), 0);
 
   return (
-    <div style={{ marginTop: 14 }}>
-      <Card>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            gap: 12,
-            flexWrap: "wrap",
-            alignItems: "center",
-          }}
-        >
+    <Card>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          gap: 12,
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
+        <div>
           <h3 style={{ margin: 0 }}>Confirmações (RSVP)</h3>
-
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <select className="select" value={attendanceFilter} onChange={(e) => setAttendanceFilter(e.target.value)}>
-              <option value="all">Vai/Não vai: Todas</option>
-              <option value="yes">Somente “Sim”</option>
-              <option value="no">Somente “Não”</option>
-            </select>
-
-            <select className="select" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="all">Status: Todos</option>
-              <option value="pending">Pendente</option>
-              <option value="confirmed">Confirmado</option>
-              <option value="attended">Compareceu</option>
-              <option value="declined">Não vai</option>
-            </select>
-
-            <button type="button" style={secondaryBtn} onClick={exportCSV}>
-              Exportar CSV
-            </button>
-          </div>
+          <p style={{ margin: "8px 0 0 0", color: "var(--muted)", fontSize: 13 }}>
+            Registros: <strong>{items.length}</strong> • Pessoas:{" "}
+            <strong>{totalPeople}</strong>
+          </p>
         </div>
 
-        <div style={{ marginTop: 10, color: "var(--muted)", fontSize: 13 }}>
-          Registros: <strong>{items.length}</strong> • Pessoas (somatório): <strong>{totalPeople}</strong>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <select
+            className="select"
+            value={attendanceFilter}
+            onChange={(e) => setAttendanceFilter(e.target.value)}
+            style={filterSelectStyle}
+          >
+            <option value="all">Vai/Não vai: Todas</option>
+            <option value="yes">Somente “Sim”</option>
+            <option value="no">Somente “Não”</option>
+          </select>
+
+          <select
+            className="select"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={filterSelectStyle}
+          >
+            <option value="all">Status: Todos</option>
+            <option value="pending">Pendente</option>
+            <option value="confirmed">Confirmado</option>
+            <option value="attended">Compareceu</option>
+            <option value="declined">Não vai</option>
+          </select>
+
+          <button type="button" style={secondaryBtn} onClick={exportCSV}>
+            Exportar CSV
+          </button>
         </div>
+      </div>
 
-        {loading && <p>Carregando...</p>}
-        {error && <p style={{ color: "red" }}>{error}</p>}
+      {loading && <p style={{ marginTop: 14 }}>Carregando...</p>}
+      {error && <p style={{ color: "red", marginTop: 14 }}>{error}</p>}
 
-        {!loading && !error && items.length === 0 && <p style={{ color: "var(--muted)" }}>Nenhuma confirmação ainda.</p>}
+      {!loading && !error && items.length === 0 && (
+        <p style={{ color: "var(--muted)", marginTop: 14 }}>
+          Nenhuma confirmação ainda.
+        </p>
+      )}
 
-        {!loading &&
-          !error &&
-          items.map((x) => (
+      {!loading &&
+        !error &&
+        items.map((x) => (
+          <div
+            key={x.id}
+            style={{
+              border: "1px solid var(--border)",
+              borderRadius: 14,
+              padding: 14,
+              marginTop: 12,
+              background: "rgba(255,255,255,.78)",
+              display: "grid",
+              gap: 8,
+            }}
+          >
             <div
-              key={x.id}
               style={{
-                border: "1px solid var(--border)",
-                borderRadius: 12,
-                padding: 12,
-                marginTop: 10,
-                background: "rgba(255,255,255,.75)",
-                display: "grid",
-                gap: 8,
+                display: "flex",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+                alignItems: "center",
               }}
             >
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", alignItems: "center" }}>
-                <div>
-                  <strong>{x.full_name}</strong>{" "}
-                  <span style={{ color: "var(--muted)", fontSize: 13 }}>
-                    • {x.attendance === "yes" ? "Vai" : "Não vai"} • {statusLabel(x.status)}
-                  </span>
-                </div>
-
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                  <button type="button" style={secondaryBtn} onClick={() => updateStatus(x.id, "pending")}>
-                    Pendente
-                  </button>
-                  <button type="button" style={secondaryBtn} onClick={() => updateStatus(x.id, "confirmed")}>
-                    Confirmar
-                  </button>
-                  <button type="button" style={secondaryBtn} onClick={() => updateStatus(x.id, "attended")}>
-                    Compareceu
-                  </button>
-
-                  {x.phone && (
-                    <button type="button" style={secondaryBtn} onClick={() => openWhatsApp(x)}>
-                      WhatsApp
-                    </button>
-                  )}
-
-                  {x.phone && (
-                    <button type="button" style={secondaryBtn} onClick={() => copyPhone(x.phone)}>
-                      Copiar tel
-                    </button>
-                  )}
-
-                  <button type="button" style={dangerBtn} onClick={() => removeItem(x.id)}>
-                    Excluir
-                  </button>
-                </div>
+              <div>
+                <strong style={{ fontSize: 16 }}>{x.full_name}</strong>{" "}
+                <span style={{ color: "var(--muted)", fontSize: 13 }}>
+                  • {x.attendance === "yes" ? "Vai" : "Não vai"} •{" "}
+                  {statusLabel(x.status)}
+                </span>
               </div>
 
-              <div style={{ fontSize: 13, color: "var(--muted)" }}>
-                Pessoas: <strong>{x.guests_count}</strong>
-                {x.phone ? (
-                  <>
-                    {" "}
-                    • Tel: <strong>{x.phone}</strong>
-                  </>
-                ) : null}
-              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button
+                  type="button"
+                  style={secondaryBtn}
+                  onClick={() => updateStatus(x.id, "pending")}
+                >
+                  Pendente
+                </button>
 
-              {x.guests_names && (
-                <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
-                  Acompanhantes: {x.guests_names}
-                </div>
-              )}
+                <button
+                  type="button"
+                  style={secondaryBtn}
+                  onClick={() => updateStatus(x.id, "confirmed")}
+                >
+                  Confirmar
+                </button>
 
-              {x.message && (
-                <div style={{ fontSize: 13, lineHeight: 1.5 }}>
-                  <strong>Mensagem:</strong> {x.message}
-                </div>
-              )}
+                <button
+                  type="button"
+                  style={secondaryBtn}
+                  onClick={() => updateStatus(x.id, "attended")}
+                >
+                  Compareceu
+                </button>
 
-              <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                {x.created_at ? new Date(x.created_at).toLocaleString("pt-BR") : ""}
-                {x.attended_at ? ` • Compareceu em: ${new Date(x.attended_at).toLocaleString("pt-BR")}` : ""}
+                {x.phone && (
+                  <button
+                    type="button"
+                    style={secondaryBtn}
+                    onClick={() => openWhatsApp(x)}
+                  >
+                    WhatsApp
+                  </button>
+                )}
+
+                {x.phone && (
+                  <button
+                    type="button"
+                    style={secondaryBtn}
+                    onClick={() => copyPhone(x.phone)}
+                  >
+                    Copiar tel
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  style={dangerBtn}
+                  onClick={() => removeItem(x.id)}
+                >
+                  Excluir
+                </button>
               </div>
             </div>
-          ))}
-      </Card>
-    </div>
+
+            <div style={{ fontSize: 13, color: "var(--muted)" }}>
+              Pessoas: <strong>{x.guests_count}</strong>
+              {x.phone ? (
+                <>
+                  {" "}
+                  • Tel: <strong>{x.phone}</strong>
+                </>
+              ) : null}
+            </div>
+
+            {x.guests_names && (
+              <div style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.5 }}>
+                Acompanhantes: {x.guests_names}
+              </div>
+            )}
+
+            {x.message && (
+              <div style={{ fontSize: 13, lineHeight: 1.5 }}>
+                <strong>Mensagem:</strong> {x.message}
+              </div>
+            )}
+
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>
+              {x.created_at ? new Date(x.created_at).toLocaleString("pt-BR") : ""}
+              {x.attended_at
+                ? ` • Compareceu em: ${new Date(x.attended_at).toLocaleString("pt-BR")}`
+                : ""}
+            </div>
+          </div>
+        ))}
+    </Card>
   );
 }
 
@@ -939,8 +1282,17 @@ function RsvpsManager() {
 ============================ */
 function Field({ label, children }) {
   return (
-    <div style={{ marginTop: 10 }}>
-      <div style={{ fontSize: 13, marginBottom: 6, color: "var(--muted)" }}>{label}</div>
+    <div style={{ marginTop: 12 }}>
+      <div
+        style={{
+          fontSize: 13,
+          marginBottom: 6,
+          color: "var(--muted)",
+          fontWeight: 600,
+        }}
+      >
+        {label}
+      </div>
       {children}
     </div>
   );
@@ -959,7 +1311,14 @@ function emptyGiftForm() {
 }
 
 function emptyPostForm() {
-  return { title: "", content: "", cover_url: "", is_published: true };
+  return {
+    title: "",
+    content: "",
+    cover_url: "",
+    link_url: "",
+    is_published: true,
+    image_file: null,
+  };
 }
 
 function truncate(text, max) {
@@ -969,7 +1328,10 @@ function truncate(text, max) {
 }
 
 function parsePriceToCents(value) {
-  const cleaned = String(value || "").trim().replace(/\./g, "").replace(",", ".");
+  const cleaned = String(value || "")
+    .trim()
+    .replace(/\./g, "")
+    .replace(",", ".");
   const num = Number(cleaned);
   if (!Number.isFinite(num)) return 0;
   return Math.round(num * 100);
@@ -977,22 +1339,50 @@ function parsePriceToCents(value) {
 
 const inputStyle = {
   width: "100%",
-  padding: "10px 12px",
+  padding: "11px 12px",
   borderRadius: 12,
   border: "1px solid var(--border)",
   fontSize: 14,
-  background: "rgba(255,255,255,.85)",
+  background: "rgba(255,255,255,.92)",
+  outline: "none",
+  boxSizing: "border-box",
+};
+
+const tabButtonStyle = {
+  padding: "11px 16px",
+  borderRadius: 999,
+  border: "1px solid var(--border)",
+  background: "rgba(255,255,255,.7)",
+  cursor: "pointer",
+  fontWeight: 700,
+  fontSize: 14,
+};
+
+const activeTabButtonStyle = {
+  background: "var(--text)",
+  color: "#fff",
+  border: "1px solid var(--text)",
 };
 
 const secondaryBtn = {
   padding: "10px 12px",
   borderRadius: 12,
   border: "1px solid var(--border)",
-  background: "rgba(255,255,255,.85)",
+  background: "rgba(255,255,255,.92)",
   cursor: "pointer",
+  fontWeight: 600,
 };
 
 const dangerBtn = {
   ...secondaryBtn,
   border: "1px solid rgba(255,0,0,.25)",
+  color: "#a11",
+};
+
+const filterSelectStyle = {
+  padding: "10px 12px",
+  borderRadius: 12,
+  border: "1px solid var(--border)",
+  background: "rgba(255,255,255,.92)",
+  fontSize: 14,
 };

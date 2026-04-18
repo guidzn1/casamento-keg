@@ -86,6 +86,27 @@ export default function Novidades() {
               <div style={{ whiteSpace: "pre-wrap", lineHeight: 1.6, fontSize: 14 }}>
                 {p.content}
               </div>
+
+              {p.link_url && (
+                <div style={{ marginTop: 14 }}>
+                  <a
+                    href={p.link_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{
+                      display: "inline-block",
+                      textDecoration: "none",
+                      padding: "10px 14px",
+                      borderRadius: 10,
+                      border: "1px solid var(--border)",
+                      color: "var(--text)",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Abrir link
+                  </a>
+                </div>
+              )}
             </Card>
           ))}
       </div>
